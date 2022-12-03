@@ -1,0 +1,93 @@
+<div class="flex-container">
+  <div class="flex-item no-grow">
+    <div>
+      <button (click)="createGameTable()">新しいテーブルを作る</button>
+    </div>
+    <select style="width: 10em;" size="10" (change)="selectGameTable($event.target.value)" [ngModel]="selectedTable?.identifier">
+      <option *ngFor="let gameTable of getGameTables()" value="{{gameTable.identifier}}">{{gameTable.name}}</option>
+    </select>
+  </div>
+  <div class="flex-item">
+    <ng-container *ngIf="selectedTable">
+      <div class="images-select">
+        <div>
+          画像
+          <div *ngIf="!tableBackgroundImage.url">
+            <button (click)="openBgImageModal()" style="height: 120px;" [disabled]="!isEditable">画像を追加</button>
+          </div>
+          <div *ngIf="tableBackgroundImage.url" (click)="openBgImageModal()">
+            <img height="120" [src]="tableBackgroundImage.url | safe: 'resourceUrl'">
+          </div>
+        </div>
+        <div>
+          背景
+          <div *ngIf="!tableDistanceviewImage.url">
+            <button (click)="openDistanceViewImageModal()" style="height: 120px;" [disabled]="!isEditable">背景画像を追加</button>
+          </div>
+          <div *ngIf="tableDistanceviewImage.url" (click)="openDistanceViewImageModal()">
+            <img height="120" [src]="tableDistanceviewImage.url | safe: 'resourceUrl'">
+          </div>
+        </div>
+      </div>
+      <div>Name :
+        <input [(ngModel)]="tableName" placeholder="Name" [disabled]="!isEditable" />
+      </div>
+      <div>
+        <input [(ngModel)]="tableWidth" type="range" min="{{minSize}}" max="{{maxSize}}" name="tableWidth" [disabled]="!isEditable"
+        /> Width :
+        <input [(ngModel)]="tableWidth" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;" [disabled]="!isEditable">
+      </div>
+      <div>
+        <input [(ngModel)]="tableHeight" type="range" min="{{minSize}}" max="{{maxSize}}" name="tableHeight" [disabled]="!isEditable"
+        /> Height :
+        <input [(ngModel)]="tableHeight" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;" [disabled]="!isEditable">
+      </div>
+      <div>
+        グリッド:
+        <select [(ngModel)]="tableGridType" name="tableGridType" [disabled]="!isEditable">
+          <option value="-1">なし</option>
+          <option value="0">スクエア</option>
+          <option value="1">ヘクス（縦揃え）</option>
+          <option value="2">ヘクス（横揃え）</option>
+        </select>
+        色:
+        <select [(ngModel)]="tableGridColor" name="tableGridColor" [disabled]="!isEditable">
+          <option value="#000000e6">黒</option>
+          <option value="#dddddde6">白</option>
+        </select>
+      </div>
+      <div>
+        背景フィルタ
+        <select [(ngModel)]="tableDistanceviewFilter" name="tableDistanceviewFilter" [disabled]="!isEditable">
+          <option value="">なし</option>
+          <option value="white">ホワイト</option>
+          <option value="black">ブラック</option>
+        </select>
+      </div>
+      <hr/>
+      <div>
+        <label>グリッドを常に表示:
+          <input type="checkbox" [(ngModel)]="tableGridShow" name="tableGridShow" />
+        </label>
+        <label>スナップ:
+          <input type="checkbox" [(ngModel)]="tableGridSnap" name="tableGridSnap" />
+        </label>
+        <ng-container *ngIf="!isDeleted">
+          <button [disabled]="isSaveing" (click)="save()">
+            <div style="position: relative;">
+              <div [ngClass]="{'is-hidden': isSaveing}">保存</div>
+              <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
+            </div>
+          </button>
+          <button class="danger" (click)="delete()" [disabled]="getGameTables().length <= 1">削除</button>
+        </ng-container>
+        <ng-container *ngIf="isDeleted">
+          <button (click)="restore()">元に戻す</button>
+        </ng-container>
+      </div>
+    </ng-container>
+  </div>
+</div>
+<ng-container *ngIf="isEmpty">
+  <div style="font-size: 12px;">※テーブルが１つも作成されていません。「新しいテーブルを作る」から新しいテーブルを作成することができます。</div>
+</ng-container>
