@@ -9,7 +9,9 @@ import {
   OnInit,
   ViewContainerRef,
 } from '@angular/core';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
+import { Card } from '@udonarium/card';
+import { CardStack } from '@udonarium/card-stack';
 import { TabletopObject } from '@udonarium/tabletop-object';
 import { OverviewPanelComponent } from 'component/overview-panel/overview-panel.component';
 import { ContextMenuService } from 'service/context-menu.service';
@@ -136,6 +138,9 @@ export class TooltipDirective implements OnInit, AfterViewInit, OnDestroy {
       EventSystem.unregister(this);
     });
     TooltipDirective.activeTooltips.push(this.tooltipComponentRef);
+
+    if (this.tabletopObject instanceof Card || this.tabletopObject instanceof CardStack)
+      EventSystem.trigger('SELECT_CARD', { identifier: this.tabletopObject.identifier });
   }
 
   private close() {

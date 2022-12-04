@@ -168,7 +168,7 @@ export class RotableDirective implements AfterViewInit, OnDestroy {
     let x = pointer.x - centerX;
     let y = pointer.y - centerY;
     let rad = Math.atan2(y, x);
-    return ((rad * 180 / Math.PI) - rotateOffset) % 360;
+    return Math.ceil(((rad * 180 / Math.PI) - rotateOffset) % 360 / 45) * 45;
   }
 
   snapToPolygonal(polygonal: number = 24) {

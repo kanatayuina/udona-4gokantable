@@ -254,6 +254,9 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onMove() {
     this.input.cancel();
+    this.card.startLocation.name = this.card.location.name;
+    this.card.startLocation.x = this.card.location.x;
+    this.card.startLocation.y = this.card.location.y;
     SoundEffect.play(PresetSound.cardPick);
   }
 

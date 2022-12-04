@@ -1,0 +1,17 @@
+<div class="flex-container">
+  <div class="flex-item">
+    <ng-container *ngIf="hasImage">
+      <div class="images-select">
+        <div>
+            <img class="card-image" [src]="cardImage.url | safe: 'resourceUrl'">
+        </div>
+      </div>
+      <!-- <div>Name :
+        <input [(ngModel)]="tableName" placeholder="Name" [attr.disabled]="!isEditable ? '' : null" />
+      </div> -->
+    </ng-container>
+  </div>
+</div>
+<ng-container *ngIf="!hasImage">
+  <div style="font-size: 12px;">※カーソルをカードに当てると表示されます。</div>
+</ng-container>

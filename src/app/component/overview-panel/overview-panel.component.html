@@ -42,6 +42,7 @@
     </div>
     <div *ngIf="0 < card?.name?.length" class="component-title title-background"
       [ngClass]="{'with-button-marign': hasImage}">
+      <ng-container *ngIf="card.isShowTotal">（{{card.cards.length}}枚）</ng-container>
       <ng-container *ngIf="card.isVisible == null || card.isVisible">{{card.name}}</ng-container>
       <ng-container *ngIf="card.isVisible != null && !card.isVisible">カード</ng-container>
     </div>

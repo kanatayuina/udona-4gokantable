@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Card } from '@udonarium/card';
+import { CardSelecter } from '@udonarium/card-selecter';
 import { CardStack } from '@udonarium/card-stack';
 import { ImageContext, ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
@@ -133,6 +134,9 @@ export class TabletopActionService {
     gameTable.initialize();
 
     TableSelecter.instance.viewTableIdentifier = gameTable.identifier;
+    
+    let cardSelecter = new CardSelecter('cardSelecter');
+    cardSelecter.initialize();
   }
 
   makeDefaultTabletopObjects() {

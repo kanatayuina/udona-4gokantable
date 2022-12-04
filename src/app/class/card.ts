@@ -3,7 +3,7 @@ import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { Network } from './core/system';
 import { DataElement } from './data-element';
 import { PeerCursor } from './peer-cursor';
-import { TabletopObject } from './tabletop-object';
+import { TabletopObject, TabletopLocation } from './tabletop-object';
 import { moveToTopmost } from './tabletop-object-util';
 
 export enum CardState {
@@ -37,6 +37,12 @@ export class Card extends TabletopObject {
   get isHand(): boolean { return Network.peerContext.userId === this.owner; }
   get isFront(): boolean { return this.state === CardState.FRONT; }
   get isVisible(): boolean { return this.isHand || this.isFront; }
+
+  startLocation: TabletopLocation = {
+    name: this.location.name,
+    'x': this.location.x,
+    'y': this.location.y
+  };
 
   faceUp() {
     this.state = CardState.FRONT;

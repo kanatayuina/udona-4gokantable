@@ -124,6 +124,7 @@ export class CardStack extends TabletopObject {
     if (180 < delta) delta = 360 - delta;
     card.rotate = delta <= 90 ? 0 : 180;
     this.setSamePositionFor(card);
+    EventSystem.call('STACKED_CARD', { identifier: card.identifier });
     return this.cardRoot.insertBefore(card, this.topCard);
   }
 
@@ -135,6 +136,7 @@ export class CardStack extends TabletopObject {
     if (180 < delta) delta = 360 - delta;
     card.rotate = delta <= 90 ? 0 : 180;
     this.setSamePositionFor(card);
+    EventSystem.call('STACKED_CARD', { identifier: card.identifier });
     return this.cardRoot.appendChild(card);
   }
 

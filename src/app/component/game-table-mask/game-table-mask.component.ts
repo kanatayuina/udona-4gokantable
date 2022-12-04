@@ -13,7 +13,7 @@ import {
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
@@ -24,6 +24,9 @@ import { CoordinateService } from 'service/coordinate.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopActionService } from 'service/tabletop-action.service';
+import { Card } from '@udonarium/card';
+import { CardStack } from '@udonarium/card-stack';
+import { TabletopService } from 'service/tabletop.service';
 
 @Component({
   selector: 'game-table-mask',
@@ -42,6 +45,10 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   get imageFile(): ImageFile { return this.gameTableMask.imageFile; }
   get isLock(): boolean { return this.gameTableMask.isLock; }
   set isLock(isLock: boolean) { this.gameTableMask.isLock = isLock; }
+  get isHandArea(): boolean { return this.gameTableMask.isHandArea; }
+  set isHandArea(isHandArea: boolean) { this.gameTableMask.isHandArea = isHandArea; }
+  get isRotateArea(): boolean { return this.gameTableMask.isRotateArea; }
+  set isRotateArea(isRotateArea: boolean) { this.gameTableMask.isRotateArea = isRotateArea; }
 
   gridSize: number = 50;
 
@@ -58,6 +65,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     private changeDetector: ChangeDetectorRef,
     private pointerDeviceService: PointerDeviceService,
     private coordinateService: CoordinateService,
+    private tabletopService: TabletopService,
   ) { }
 
   ngOnInit() {
@@ -94,6 +102,47 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     EventSystem.unregister(this);
   }
 
+  // TODO:rotateに未対応。厳密なカードサイズの取得方法が未整理(2:3で仮決め)
+  @HostListener('carddrop', ['$event'])
+  onCardDrop(e) {
+    if (this.gameTableMask === e.detail || (e.detail instanceof GameTableMask === false && e.detail instanceof Card === false)) {
+      return;
+    }
+    if (this.isHandArea === false && this.isRotateArea === false) {
+      return;
+    }
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (e.detail instanceof Card) {
+      let card: Card = e.detail;
+      let toleranceX: number = card.size * 50 * 0.2;
+      let toleranceY: number = card.size * 75 * 0.2;
+
+      // let beforeDistance: number = (card.startLocation.x - this.gameTableMask.location.x) ** 2 + (card.startLocation.y - this.gameTableMask.location.y) ** 2 + (card.posZ - this.gameTableMask.posZ) ** 2;
+      // let already: boolean = beforeDistance < 100 ** 2;
+      let already: boolean = (this.gameTableMask.location.x < card.startLocation.x + toleranceX) && (this.gameTableMask.location.y < card.startLocation.y + toleranceY) && (card.startLocation.x + card.size * 50 - toleranceX < this.gameTableMask.location.x + this.gameTableMask.width * 50) && (card.startLocation.y + card.size * 75 - toleranceY < this.gameTableMask.location.y + this.gameTableMask.height * 50);
+
+      // let distance: number = (card.location.x - this.gameTableMask.location.x) ** 2 + (card.location.y - this.gameTableMask.location.y) ** 2 + (card.posZ - this.gameTableMask.posZ) ** 2;
+      // let overlapped: boolean = distance < 100 ** 2;
+      let overlapped: boolean = (this.gameTableMask.location.x < card.location.x + toleranceX) && (this.gameTableMask.location.y < card.location.y + toleranceY) && (card.location.x + card.size * 50 - toleranceX < this.gameTableMask.location.x + this.gameTableMask.width * 50) && (card.location.y + card.size * 75 - toleranceY < this.gameTableMask.location.y + this.gameTableMask.height * 50);
+
+      if (overlapped && this.isHandArea && !card.isHand) {
+        SoundEffect.play(PresetSound.cardDraw);
+        card.faceDown();
+        card.owner = Network.peerContext.userId;
+      }
+      if (!already && overlapped && this.isRotateArea) {
+      // if (overlapped && this.isRotateArea) {
+        SoundEffect.play(PresetSound.cardDraw);
+        // let addition: number = 90;
+        // if (360 < card.rotate + addition) addition -= 360;
+        card.rotate = this.gameTableMask.cardRotate;
+      }
+      // if(overlapped) this.overlappedCards.push(card);
+    }
+  }
+
   @HostListener('dragstart', ['$event'])
   onDragstart(e) {
     e.stopPropagation();
@@ -118,6 +167,19 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     let menuPosition = this.pointerDeviceService.pointers[0];
     let objectPosition = this.coordinateService.calcTabletopLocalCoordinate();
     this.contextMenuService.open(menuPosition, [
+      {
+        name: '乗っているカードの向きを揃える', action: () => {
+          this.rotateCards(this.gameTableMask.cardRotate);
+          SoundEffect.play(PresetSound.cardPut);
+        }
+      },
+      {
+        name: '乗っているカードで山札を作る', action: () => {
+          this.createStack();
+          SoundEffect.play(PresetSound.cardPut);
+        }
+      },
+      ContextMenuSeparator,
       (this.isLock
         ? {
           name: '固定解除', action: () => {
@@ -128,6 +190,34 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
         : {
           name: '固定する', action: () => {
             this.isLock = true;
+            SoundEffect.play(PresetSound.lock);
+          }
+        }
+      ),
+      (this.isHandArea
+        ? {
+          name: '手札エリア解除', action: () => {
+            this.isHandArea = false;
+            SoundEffect.play(PresetSound.unlock);
+          }
+        }
+        : {
+          name: '手札エリアにする', action: () => {
+            this.isHandArea = true;
+            SoundEffect.play(PresetSound.lock);
+          }
+        }
+      ),
+      (this.isRotateArea
+        ? {
+          name: 'カード揃えエリア解除', action: () => {
+            this.isRotateArea = false;
+            SoundEffect.play(PresetSound.unlock);
+          }
+        }
+        : {
+          name: 'カード揃えエリアにする', action: () => {
+            this.isRotateArea = true;
             SoundEffect.play(PresetSound.lock);
           }
         }
@@ -172,8 +262,50 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = 'マップマスク設定';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 300 };
+    let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 340 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
     component.tabletopObject = gameObject;
+  }
+
+  private rotateCards(rotate: number) {
+    let cards: Card[] = this.tabletopService.cards.filter(card => {
+      let tolerance: number = card.size * 50 * 0.2;
+      let overlapped: boolean = (this.gameTableMask.location.x < card.location.x + tolerance) && (this.gameTableMask.location.y < card.location.y + tolerance) && (card.location.x + card.size * 50 - tolerance < this.gameTableMask.location.x + this.gameTableMask.width * 50) && (card.location.y + card.size * 75 - tolerance < this.gameTableMask.location.y + this.gameTableMask.height * 50);
+      return overlapped;
+    });
+
+    if (cards.length == 0) return;
+
+    for (let card of cards) {
+      card.rotate = rotate;
+    }
+  }
+
+  private createStack() {
+    let cards: Card[] = this.tabletopService.cards.filter(card => {
+      let tolerance: number = card.size * 50 * 0.2;
+      let overlapped: boolean = (this.gameTableMask.location.x < card.location.x + tolerance) && (this.gameTableMask.location.y < card.location.y + tolerance) && (card.location.x + card.size * 50 - tolerance < this.gameTableMask.location.x + this.gameTableMask.width * 50) && (card.location.y + card.size * 75 - tolerance < this.gameTableMask.location.y + this.gameTableMask.height * 50);
+      return overlapped;
+    });
+
+    if (cards.length == 0) return;
+
+    cards.sort((a, b) => {
+      if (a.zindex < b.zindex) return 1;
+      if (a.zindex > b.zindex) return -1;
+      return 0;
+    });
+
+    let cardStack = CardStack.create('山札');
+    cardStack.location.x = cards[0].location.x;
+    cardStack.location.y = cards[0].location.y;
+    cardStack.posZ = cards[0].posZ;
+    cardStack.location.name = cards[0].location.name;
+    cardStack.rotate = cards[0].rotate;
+    cardStack.zindex = cards[0].zindex;
+
+    for (let card of cards) {
+      cardStack.putOnBottom(card);
+    }
   }
 }

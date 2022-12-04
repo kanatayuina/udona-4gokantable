@@ -7,6 +7,7 @@ import { BadgeComponent } from 'component/badge/badge.component';
 import { CardStackListComponent } from 'component/card-stack-list/card-stack-list.component';
 import { CardStackComponent } from 'component/card-stack/card-stack.component';
 import { CardComponent } from 'component/card/card.component';
+import { CardViewComponent } from 'component/card-view/card-view.component';
 import { ChatInputComponent } from 'component/chat-input/chat-input.component';
 import { ChatMessageComponent } from 'component/chat-message/chat-message.component';
 import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.component';
@@ -63,6 +64,7 @@ import { AppComponent } from './app.component';
     CardComponent,
     CardStackComponent,
     CardStackListComponent,
+    CardViewComponent,
     ChatMessageComponent,
     ChatPaletteComponent,
     ChatTabComponent,
