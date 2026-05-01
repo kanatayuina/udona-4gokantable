@@ -14,6 +14,6 @@
 
 ## License
 
-[MIT License](https://github.com/kanatayuina/udona-4gokantable/blob/master/LICENSE)
+[MIT License](https://github.com/kanatayuina/udona-4gokantable/blob/main/LICENSE)
 
 [1]: https://4gokantable.blog.jp/archives/1079889646.html
