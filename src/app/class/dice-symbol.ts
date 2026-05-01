@@ -41,7 +41,8 @@ export class DiceSymbol extends TabletopObject {
     return object ? object.name : '';
   }
   get hasOwner(): boolean { return 0 < this.owner.length; }
-  get isMine(): boolean { return Network.peerContext.userId === this.owner; }
+  get ownerIsOnline(): boolean { return this.hasOwner && (this.isMine || Network.peers.some(peer => peer.userId === this.owner && peer.isOpen)); }
+  get isMine(): boolean { return Network.peer.userId === this.owner; }
   get isVisible(): boolean { return !this.hasOwner || this.isMine; }
 
   diceRoll(): string {

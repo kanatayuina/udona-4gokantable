@@ -1,5 +1,6 @@
 import { EventSystem, Network } from '../system';
 import { GameObject, ObjectContext } from './game-object';
+import { markForChanged } from './object-event-extension';
 import { ObjectFactory } from './object-factory';
 import { CatalogItem, ObjectStore } from './object-store';
 import { SynchronizeRequest, SynchronizeTask } from './synchronize-task';
@@ -58,11 +59,17 @@ export class ObjectSynchronizer {
         let context: ObjectContext = event.data;
         let object: GameObject = ObjectStore.instance.get(context.identifier);
         if (object) {
-          if (!event.isSendFromSelf) this.updateObject(object, context);
+          let updateObject = event.isSendFromSelf ? object : this.updateObject(object, context);
+          if (updateObject) {
+            markForChanged(updateObject, event.sendFrom);
+          } else if (!event.isSendFromSelf) {
+            EventSystem.call('UPDATE_GAME_OBJECT', object.toContext(), event.sendFrom);
+          }
         } else if (ObjectStore.instance.isDeleted(context.identifier)) {
           EventSystem.call('DELETE_GAME_OBJECT', { aliasName: context.aliasName, identifier: context.identifier }, event.sendFrom);
         } else {
-          this.createObject(context);
+          let newObject = this.createObject(context);
+          if (newObject) markForChanged(newObject, event.sendFrom);
         }
       })
       .on('DELETE_GAME_OBJECT', 1000, event => {
@@ -75,20 +82,25 @@ export class ObjectSynchronizer {
     EventSystem.unregister(this);
   }
 
-  private updateObject(object: GameObject, context: ObjectContext) {
-    if (context.majorVersion + context.minorVersion > object.version) {
+  private updateObject(object: GameObject, context: ObjectContext): GameObject {
+    let version = context.majorVersion + context.minorVersion;
+    if (object.version < version) {
       object.apply(context);
+    } else if (version < object.version) {
+      return null;
     }
+    return object;
   }
 
-  private createObject(context: ObjectContext) {
+  private createObject(context: ObjectContext): GameObject {
     let newObject: GameObject = ObjectFactory.instance.create(context.aliasName, context.identifier);
     if (!newObject) {
       console.warn(context.aliasName + ' is Unknown...?', context);
-      return;
+      return null;
     }
     ObjectStore.instance.add(newObject, false);
     newObject.apply(context);
+    return newObject;
   }
 
   private sendCatalog(sendTo: PeerId) {
@@ -120,16 +132,20 @@ export class ObjectSynchronizer {
   }
 
   private synchronize() {
-    while (0 < this.requestMap.size && this.tasks.length < 32) this.runSynchronizeTask();
+    let isContinue = true;
+    while (0 < this.requestMap.size && this.tasks.length < 32 && isContinue) {
+      isContinue = this.runSynchronizeTask();
+    };
   }
 
   private runSynchronizeTask() {
     let targetPeerId = this.getTargetPeerId();
+    if (targetPeerId.length < 1) return false;
     let requests: SynchronizeRequest[] = this.makeRequestList(targetPeerId);
 
     if (requests.length < 1) {
       this.removePeerMap(targetPeerId);
-      return;
+      return 0 < this.peerMap.size;
     }
     let task = SynchronizeTask.create(targetPeerId, requests);
     this.tasks.push(task);
@@ -148,6 +164,8 @@ export class ObjectSynchronizer {
       console.log('GameObject synchronize タイムアウト');
       remainedRequests.forEach(request => this.requestMap.set(request.identifier, request));
     }
+
+    return true;
   }
 
   private makeRequestList(targetPeerId: PeerId, maxRequest: number = 32): SynchronizeRequest[] {
@@ -167,19 +185,19 @@ export class ObjectSynchronizer {
 
   private getTargetPeerId(): PeerId {
     let min = 9999;
-    let selectPeerId: PeerId = null;
-    let peerContexts = Network.peerContexts;
+    let selectPeerId: PeerId = '';
+    let peers = Network.peers;
 
-    for (let i = peerContexts.length - 1; 0 <= i; i--) {
+    for (let i = peers.length - 1; 0 <= i; i--) {
       let rand = Math.floor(Math.random() * (i + 1));
-      [peerContexts[i], peerContexts[rand]] = [peerContexts[rand], peerContexts[i]];
+      [peers[i], peers[rand]] = [peers[rand], peers[i]];
     }
 
-    for (let peerContext of peerContexts) {
-      let tasks = this.peerMap.get(peerContext.peerId);
-      if (peerContext.isOpen && tasks && tasks.length < min) {
+    for (let peer of peers) {
+      let tasks = this.peerMap.get(peer.peerId);
+      if (peer.isOpen && tasks && tasks.length < min) {
         min = tasks.length;
-        selectPeerId = peerContext.peerId;
+        selectPeerId = peer.peerId;
       }
     }
     return selectPeerId;

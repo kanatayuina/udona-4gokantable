@@ -12,10 +12,10 @@ import {
   OnDestroy,
   OnInit,
   Output,
-  ViewChild,
+  ViewChild
 } from '@angular/core';
 
-import { ChatMessage, ChatMessageContext } from '@udonarium/chat-message';
+import { ChatMessage } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem } from '@udonarium/core/system';
@@ -36,13 +36,44 @@ const isiOS = ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1 || ua.indexOf
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges, AfterViewChecked {
-  sampleMessages: ChatMessageContext[] = [
-    { from: 'System', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル', text: 'サーバーを使用しないTRPGオンセツールです。参加者同士で接続し、コマや画像ファイルなどを同期します。' },
-    { from: 'System', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル', text: '全てのデータが各参加者のブラウザ内にあるため、ルームの状態を次回に持ち越したい場合は、必ず「保存」を実行してセーブデータ（zip）を生成してください。保存したzipの読み込みはブラウザ画面へのファイルドロップで行えます。' },
-    { from: 'System', to: '???', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル > プレイヤー', text: 'ダイレクトメッセージ（秘密会話）はセーブデータに記録されません。' },
-    { from: 'System', to: '???', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル > プレイヤー', text: 'また、過去のダイレクトメッセージはあなたのIDが更新されると同じルーム内であっても見えなくなります。注意してください。' },
-    { from: 'System', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル', text: '動作推奨環境はデスクトップChromeです。今のところ、スマホからだと上手く操作できません。' },
-    { from: 'System', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル', text: 'チュートリアルは以上です。このチュートリアルは最初のチャットを入力すると非表示になります。' },
+  sampleMessages: ChatMessage[] = [
+    this.makeSampleMessage('System', null, 'チュートリアル：はじめに', 'ユドナリウムはサーバーを使用しないTRPGオンセツールです。参加者同士で接続し、コマや画像ファイルなどを同期します。'),
+    this.makeSampleMessage('System', null, 'テーブルとコマの基本操作', `＜テーブルの操作＞
+テーブルを左ドラッグ : 視点変更
+テーブルを右ドラッグ : 視点回転
+テーブルを右クリック : コンテキストメニューを表示
+
+＜オブジェクトの操作＞
+オブジェクトをドラッグ操作 : オブジェクトの移動や回転
+オブジェクトを右クリック : 個別のコンテキストメニューを表示
+オブジェクトを左ダブルクリック : オブジェクト固有の動作`),
+    this.makeSampleMessage('System', null, '範囲選択', `<用語>
+範囲選択モード : 選択領域の内側に見えているオブジェクトを選択状態にする
+磁石モード : 同じ種類のオブジェクトを巻き込みながら移動させる
+
+<オブジェクトの選択>
+テーブルをマウス左ボタン長押し+ドラッグ操作 : 長押しで範囲選択モードを開始し、ドラッグで範囲領域を指定
+オブジェクトを左ダブルクリック長押し+ドラッグ操作 : 長押しで磁石モードを開始し、ドラッグでオブジェクトを移動
+Shift+マウス左ボタン+ドラッグ操作 : 即時に範囲選択モードを開始し、ドラッグで範囲領域を指定
+Ctrl+マウス左ボタン : クリックしたオブジェクトの選択状態を切り替える
+Ctrl+マウス左ボタン+ドラッグ操作 : マウスカーソルの触れた対象を選択状態にする
+
+<選択オブジェクトの操作>
+選択オブジェクトを移動 : 選択状態の全てのオブジェクトが同期して移動
+選択オブジェクトを回転 : 選択状態の同じ種類のオブジェクトが同期して回転
+
+<選択解除>
+任意の場所をクリック : 全ての選択状態を解除`),
+    this.makeSampleMessage('System', null, '画像と音楽', 'ファイルをブラウザ画面にドラッグ&ドロップすることでユドナリウムに取り込めます。'),
+    this.makeSampleMessage('System', null, 'データの保存', '全てのデータが各参加者のブラウザ内にのみ存在するため、全員がルームから離脱するとデータが消失します。ルームの状態を次回セッションに持ち越したい場合は、必ず「保存」を実行してセーブデータ（zip）を生成してください。保存したzipの読み込みはブラウザ画面へのファイルドロップで行えます。'),
+    this.makeSampleMessage('System', '???', 'ダイレクトメッセージ > プレイヤー', 'ダイレクトメッセージ（秘密会話）はセーブデータに記録されません。'),
+    this.makeSampleMessage('System', '???', 'ダイレクトメッセージ > プレイヤー', 'また、過去のダイレクトメッセージはあなたのIDが更新されると同じルーム内であっても見えなくなります。注意してください。'),
+    this.makeSampleMessage('System', null, '動作環境', '動作推奨環境はデスクトップChrome、またはデスクトップFirefoxです。今のところ、スマホからだと操作性に難があります。'),
+    this.makeSampleMessage('System', null, '動作が不安定な時は', `利用環境の設定変更で改善できるかもしれません。次の事を試してみて下さい。
+・ハードウェア アクセラレーションをオンにする
+・ブラウザ拡張機能（アドオン／プラグイン）を全てオフにする
+・Chrome ⇔ Firefoxなど違うブラウザを使用する`),
+    this.makeSampleMessage('System', null, 'チュートリアル：おわりに', 'チュートリアルは以上です。このチュートリアルは最初のチャットを入力すると非表示になります。'),
   ];
 
   private topTimestamp = 0;
@@ -95,7 +126,7 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
 
   private scrollEventShortTimer: ResettableTimeout = null;
   private scrollEventLongTimer: ResettableTimeout = null;
-  private addMessageEventTimer: NodeJS.Timer = null;
+  private addMessageEventTimer: NodeJS.Timeout = null;
 
   private callbackOnScroll: any = () => this.onScroll();
   private callbackOnScrollToBottom: any = () => this.resetMessages();
@@ -110,23 +141,6 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
   ) { }
 
   ngOnInit() {
-    let messages: ChatMessage[] = [];
-    for (let context of this.sampleMessages) {
-      let message = new ChatMessage();
-      for (let key in context) {
-        if (key === 'identifier') continue;
-        if (key === 'tabIdentifier') continue;
-        if (key === 'text') {
-          message.value = context[key];
-          continue;
-        }
-        if (context[key] == null || context[key] === '') continue;
-        message.setAttribute(key, context[key]);
-      }
-      messages.push(message);
-    }
-    this.sampleMessages = messages;
-
     EventSystem.register(this)
       .on('MESSAGE_ADDED', event => {
         let message = ObjectStore.instance.get<ChatMessage>(event.data.messageIdentifier);
@@ -138,9 +152,9 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
           this.onMessageInit();
         }
       })
-      .on('UPDATE_GAME_OBJECT', event => {
-        let message = ObjectStore.instance.get(event.data.identifier);
-        if (message && message instanceof ChatMessage
+      .on(`UPDATE_GAME_OBJECT/aliasName/${ChatMessage.aliasName}`, event => {
+        let message = ObjectStore.instance.get<ChatMessage>(event.data.identifier);
+        if (message
           && this.topTimestamp <= message.timestamp && message.timestamp <= this.botomTimestamp
           && this.chatTab.contains(message)) {
           this.changeDetector.markForCheck();
@@ -391,5 +405,14 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
       }
     }
     this.adjustIndex();
+  }
+
+  private makeSampleMessage(from: string, to: string, name: string, text: string): ChatMessage {
+    let message = new ChatMessage();
+    message.from = from;
+    message.to = to;
+    message.name = name;
+    message.value = text;
+    return message;
   }
 }
